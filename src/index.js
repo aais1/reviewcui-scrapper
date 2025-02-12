@@ -5,6 +5,7 @@ import { ExtractDepartment } from "../lib/ExtractDepartment.js";
 
 // List of department URLs for faculty profiles ( get these running the lib function i m too lazy to do that or use the current ones ;))
 const allDepLinks = [
+  "https://www.cuiatd.edu.pk/computer-science/faculty-profiles-cs/",
   "https://www.cuiatd.edu.pk/biotechnology/faculty-and-staff-profiles-bio/",
   "https://www.cuiatd.edu.pk/chemistry/faculty-profiles-chemistry/",
   "https://www.cuiatd.edu.pk/civil-engineering/faculty-and-staff-profiles-civil/",
@@ -19,8 +20,6 @@ const allDepLinks = [
   "https://www.cuiatd.edu.pk/mathematics/faculty-and-staff-profiles-maths/",
   "https://www.cuiatd.edu.pk/pharmacy/faculty-and-staff-profiles-pharmacy/",
 ];
-
-//"https://www.cuiatd.edu.pk/computer-science/faculty-profiles-cs/",
 
 (async () => {
   await dbConnect();
