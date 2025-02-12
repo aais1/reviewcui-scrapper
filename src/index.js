@@ -1,48 +1,83 @@
-import puppeteer from 'puppeteer';
-import Faculty from '../models/Faculty.js';
-import { dbConnect } from '../lib/db.js';
+import puppeteer from "puppeteer";
+import Faculty from "../models/Faculty.js";
+import { dbConnect } from "../lib/db.js";
+import { ExtractDepartment } from "../lib/ExtractDepartment.js";
 
+// List of department URLs for faculty profiles ( get these running the lib function i m too lazy to do that or use the current ones ;))
+const allDepLinks = [
+  "https://www.cuiatd.edu.pk/biotechnology/faculty-and-staff-profiles-bio/",
+  "https://www.cuiatd.edu.pk/chemistry/faculty-profiles-chemistry/",
+  "https://www.cuiatd.edu.pk/civil-engineering/faculty-and-staff-profiles-civil/",
+  "https://www.cuiatd.edu.pk/computer-engineering/faculty-profiles-ce/",
+  "https://www.cuiatd.edu.pk/development-studies/faculty-and-staff-profiles-ds/",
+  "https://www.cuiatd.edu.pk/earth-sciences/faculty-and-staff-profiles-earth/",
+  "https://www.cuiatd.edu.pk/economics/faculty-profiles-economics/",
+  "https://www.cuiatd.edu.pk/electrical-computer-engineering/faculty-and-staff-profiles-ee/",
+  "https://www.cuiatd.edu.pk/environmental-sciences/faculty-profiles-es/",
+  "https://www.cuiatd.edu.pk/humanities/faculty-profiles-humanities/",
+  "https://www.cuiatd.edu.pk/management-sciences/faculty-profiles-ms/",
+  "https://www.cuiatd.edu.pk/mathematics/faculty-and-staff-profiles-maths/",
+  "https://www.cuiatd.edu.pk/pharmacy/faculty-and-staff-profiles-pharmacy/",
+];
+
+//"https://www.cuiatd.edu.pk/computer-science/faculty-profiles-cs/",
 
 (async () => {
   await dbConnect();
-  // Launch the browser
-  const browser = await puppeteer.launch({ headless: false }); // Set headless: false for debugging
+
+  const browser = await puppeteer.launch({ headless: false });
   const page = await browser.newPage();
 
-  // Navigate to the website
-  await page.goto('https://www.cuiatd.edu.pk/computer-science/faculty-profiles-cs/', { waitUntil: 'domcontentloaded',timeout:120000 });
+  // Iterate over each department link
+  for (const departmentUrl of allDepLinks) {
+    console.log(`Visiting: ${departmentUrl}`);
+    const department = ExtractDepartment(departmentUrl);
 
-  // Set screen size
-  await page.setViewport({ width: 1080, height: 1024 });
+    await page.goto(departmentUrl, {
+      waitUntil: "domcontentloaded",
+      timeout: 120000,
+    });
 
-  // Select all faculty grid elements
-  const searchResultSelector = '.faculty-grid';
-  await page.waitForSelector(searchResultSelector); // Ensure the element is loaded
-  
-  // Extract data
-  const facultyData = await page.evaluate(() => {
-    let facultyElements = document.querySelectorAll('.faculty-grid .faculty-item'); // Adjust selector if necessary
-    return Array.from(facultyElements).map((item,inx) =>({
-      name: item.querySelector('h3')?.innerText.trim(),  // Extract name
-      profileImage:item.querySelector('.profile-image')?.src,
-      profileLink:item.querySelector('.view-profile-button')?.href,
-      designation: item.querySelector('.faculty-designation')?.innerText?.trim(), // Extract position
-      hecApproved:item.querySelector('.hec-supervisor-badge') ? true : false ,
-      interest: item.querySelector('.interest-content')?.innerText?.trim(), 
-      profileLink: item.querySelector('a')?.href // Extract profile link
-    }));
-  });
+    await page.setViewport({ width: 1080, height: 1024 });
 
-  console.log(facultyData);
+    const searchResultSelector = ".faculty-grid";
+    await page.waitForSelector(searchResultSelector);
 
-  facultyData.forEach(facultyData=>{
-    const faculty = new Faculty(facultyData);
-    faculty.save().then(()=>{
-      console.log(facultyData.name+' saved to the database');
-    }).catch((e)=>{
-      console.log(e.message);})
-    }
-  )
-  
+    // Extract data
+    const facultyData = await page.evaluate(() => {
+      const facultyElements = document.querySelectorAll(
+        ".faculty-grid .faculty-item"
+      );
+      return Array.from(facultyElements).map((item) => ({
+        name: item.querySelector("h3")?.innerText.trim(),
+        profileImage: item.querySelector(".profile-image")?.src,
+        profileLink: item.querySelector(".view-profile-button")?.href,
+        designation: item
+          .querySelector(".faculty-designation")
+          ?.innerText?.trim(),
+        hecApproved: item.querySelector(".hec-supervisor-badge") ? true : false,
+        interest: item.querySelector(".interest-content")?.innerText?.trim(),
+        profileLink: item.querySelector("a")?.href,
+      }));
+    });
+
+    console.log(`Faculty Links for ${departmentUrl}:`, facultyData);
+
+    facultyData.forEach((faculty) => {
+      const facultyInstance = new Faculty({
+        ...faculty,
+        department,
+      });
+      facultyInstance
+        .save()
+        .then(() => {
+          console.log(`${faculty.name} saved to the database`);
+        })
+        .catch((e) => {
+          console.log(e.message);
+        });
+    });
+  }
+
   await browser.close();
 })();
